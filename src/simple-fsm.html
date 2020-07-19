@@ -1,0 +1,120 @@
+<script type="text/javascript">
+    var defaultFsm = {
+        "initial_state": "IDLE",
+        "states": {
+            "IDLE": {
+                "run": "RUNNING"
+            },
+            "RUNNING": {
+                "stop": "IDLE"
+            }
+        }
+    }
+
+    RED.nodes.registerType('simple-fsm', {
+        category: 'function',
+        color: '#fcba03',
+        defaults: {
+            name: { value: "" },
+            fsmDefinition: {
+                value: JSON.stringify(defaultFsm),
+                validate: function (v) {
+                    try {
+                        let definitions = JSON.parse(v)
+                        return definitions.hasOwnProperty('initial_state')
+                            && definitions.hasOwnProperty('states')
+                            && Object.entries(definitions.states).every(([key, value]) =>
+                                typeof key == "string"
+                                && typeof value == "object"
+                                && Object.entries(value).every(([nkey, nvalue]) =>
+                                    typeof nvalue == "string"
+                                    && typeof nkey == "string"
+                                )
+                            )
+                            && typeof definitions.initial_state == "string"
+                            && typeof definitions.states == 'object'
+                    } catch (e) {
+                        return false
+                    }
+                }
+            },
+            throwTransitionErrors: { value: true }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "function.png",
+        label: function () {
+            return this.name || "simple-fsm";
+        },
+        inputLabels: "trigger",
+        outputLabels: ["state"],
+        oneditprepare: function () {
+
+            // create definiton input field
+            let definitionInput = $("#node-input-fsmDefinition")
+            definitionInput.typedInput({
+                default: 'json',
+                types: ['json'],
+                typeField: $("#node-input-fsmDefinition")
+            });
+            definitionInput.typedInput('value', this.fsmDefinition);
+
+            definitionInput.on("change", function (type, value) {
+                try {
+                    var json = JSON.parse(definitionInput.typedInput('value'));
+                    $('#fsm-graph').empty();
+                    setTimeout(function () {
+                        drawStateMachine(json, "100%", 500);
+                    }, 500)
+                } catch (e) {
+                    //do nothing
+                }
+            });
+        },
+        oneditsave: function () {
+            return;
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="simple-fsm">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-fsmDefinition"><i class="icon-tag"></i> FSM</label>
+    <input type="text" id="node-input-fsmDefinition" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label>&nbsp;</label>
+    <input type="checkbox" id="node-input-sendInitialState" style="display: inline-block; width: auto; vertical-align: top;">
+    <label for="node-input-sendInitialState" style="width: 70%;">Send initial state</label>
+  </div>
+  <div class="form-row">
+    <label>&nbsp;</label>
+    <input type="checkbox" id="node-input-sendStateWithoutChange" style="display: inline-block; width: auto; vertical-align: top;">
+    <label for="node-input-sendStateWithoutChange" style="width: 70%;">Always send state change</label>
+  </div>
+  <div class="form-row">
+    <label>&nbsp;</label>
+    <input type="checkbox" id="node-input-throwTransitionErrors" style="display: inline-block; width: auto; vertical-align: top;">
+    <label for="node-input-throwTransitionErrors" style="width: 70%;">Throw transition errors</label>
+  </div>
+  <div class="form-row">
+    <p>left-click: move / right-click: zoom</p>
+    <div id="fsm-graph">
+    </div>
+  </div>
+</script>
+
+<script type="text/html" data-help-name="simple-fsm">
+   <p>Some useful help text to introduce the node.</p>
+   <h3>Outputs</h3>
+       <dl class="message-properties">
+       <dt>payload
+           <span class="property-type">string | buffer</span>
+       </dt>
+   <h3>Details</h3>
+   <p>Some more information about the node.</p>
+</script>
